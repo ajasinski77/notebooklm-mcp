@@ -399,5 +399,119 @@ async def download_data_table(notebook_id: str, output_path: str, artifact_id: s
     return await call_with_retry(_do)
 
 
+# ---------------------------------------------------------------------------
+# Notebook / source / note / artifact management (rename, delete, list)
+# ---------------------------------------------------------------------------
+
+@mcp.tool()
+async def rename_notebook(notebook_id: str, new_title: str):
+    """Rename a notebook."""
+    async def _do(c):
+        nb = await c.notebooks.rename(notebook_id, new_title)
+        return {"id": nb.id, "title": nb.title}
+    return await call_with_retry(_do)
+
+
+@mcp.tool()
+async def delete_notebook(notebook_id: str):
+    """Permanently delete a notebook with all its sources and generated content. Cannot be undone."""
+    async def _do(c):
+        await c.notebooks.delete(notebook_id)
+        return {"deleted": notebook_id}
+    return await call_with_retry(_do)
+
+
+@mcp.tool()
+async def list_sources(notebook_id: str):
+    """List all sources in a notebook."""
+    async def _do(c):
+        sources = await c.sources.list(notebook_id)
+        return [{"id": s.id, "title": s.title, "type": str(getattr(s, "kind", None) or getattr(s, "type", None)),
+                 "url": getattr(s, "url", None)} for s in sources]
+    return await call_with_retry(_do)
+
+
+@mcp.tool()
+async def rename_source(notebook_id: str, source_id: str, new_title: str):
+    """Rename a source in a notebook."""
+    async def _do(c):
+        s = await c.sources.rename(notebook_id, source_id, new_title)
+        return {"id": source_id, "title": s.title if s else new_title}
+    return await call_with_retry(_do)
+
+
+@mcp.tool()
+async def delete_source(notebook_id: str, source_id: str):
+    """Permanently delete a source from a notebook."""
+    async def _do(c):
+        await c.sources.delete(notebook_id, source_id)
+        return {"deleted": source_id}
+    return await call_with_retry(_do)
+
+
+@mcp.tool()
+async def list_notes(notebook_id: str):
+    """List all notes in a notebook."""
+    async def _do(c):
+        notes = await c.notes.list(notebook_id)
+        return [{"id": n.id, "title": n.title} for n in notes]
+    return await call_with_retry(_do)
+
+
+@mcp.tool()
+async def create_note(notebook_id: str, title: str = "New Note", content: str = ""):
+    """Create a note in a notebook."""
+    async def _do(c):
+        n = await c.notes.create(notebook_id, title, content)
+        return {"id": n.id, "title": n.title}
+    return await call_with_retry(_do)
+
+
+@mcp.tool()
+async def update_note(notebook_id: str, note_id: str, title: str, content: str):
+    """Replace a note's title and content."""
+    async def _do(c):
+        await c.notes.update(notebook_id, note_id, content=content, title=title)
+        return {"updated": note_id}
+    return await call_with_retry(_do)
+
+
+@mcp.tool()
+async def delete_note(notebook_id: str, note_id: str):
+    """Permanently delete a note from a notebook."""
+    async def _do(c):
+        await c.notes.delete(notebook_id, note_id)
+        return {"deleted": note_id}
+    return await call_with_retry(_do)
+
+
+@mcp.tool()
+async def list_artifacts(notebook_id: str):
+    """List generated artifacts (audio, video, slides, quizzes, reports, ...) in a notebook."""
+    async def _do(c):
+        arts = await c.artifacts.list(notebook_id)
+        return [{"id": a.id, "title": getattr(a, "title", None),
+                 "type": str(getattr(a, "kind", None) or getattr(a, "type", None))} for a in arts]
+    return await call_with_retry(_do)
+
+
+@mcp.tool()
+async def rename_artifact(notebook_id: str, artifact_id: str, new_title: str):
+    """Rename a generated artifact."""
+    async def _do(c):
+        await c.artifacts.rename(notebook_id, artifact_id, new_title, return_object=False)
+        return {"id": artifact_id, "title": new_title}
+    return await call_with_retry(_do)
+
+
+@mcp.tool()
+async def delete_artifact(notebook_id: str, artifact_id: str):
+    """Permanently delete a generated artifact from a notebook."""
+    async def _do(c):
+        await c.artifacts.delete(notebook_id, artifact_id)
+        return {"deleted": artifact_id}
+    return await call_with_retry(_do)
+
+
 if __name__ == "__main__":
     mcp.run()
